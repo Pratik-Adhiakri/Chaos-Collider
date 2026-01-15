@@ -1,5 +1,5 @@
-//lets start the js 
-//lets declare 99999 const and variable
+//lets start the js now 
+//lets declare 99999 const and variable 
 const scoretext = document.getElementById('score-display');
 const livestext = document.getElementById('lives-display');
 const startscreen = document.getElementById('start-screen');
@@ -7,9 +7,9 @@ const gameoverscreen = document.getElementById('game-over');
 const statuslabel = document.getElementById('status-text');
 const finalscore = document.getElementById('final-score');
 const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');//ctx is the GOAT
+const ctx = canvas.getContext('2d');
 const SETTINGS ={
-    padlew: 120,
+    paddlew: 120,
     paddleh:15,
     ballsize:8,
     rows:7,
@@ -37,7 +37,7 @@ let paddle = {
     width: SETTINGS.paddlew,
     height: SETTINGS.paddleh,
     targetwidth: SETTINGS.paddlew,
-    color: SETTINGS.palette[1],//thats the benefit of devlaring all stuffs up
+    color: SETTINGS.palette[1],
     glow:15
 };
 //now lets do the real code aprt of declaring stuffs
@@ -61,7 +61,7 @@ class Ball{
         this.y += this.dy;
         if(this.x < this.radius || this.x>canvas.width - this.radius){
             this.dx *= -1;
-            spawnParticles(this.x, this.y, this.color, 5);
+            spawnparticles(this.x, this.y, this.color, 5);
         }
         if(this.y< this.radius){
             this.dy *= -1;
@@ -69,8 +69,8 @@ class Ball{
         if(
             this.y + this.radius> paddle.y &&
             this.x > paddle.x &&
-            this.x, paddle.x = paddle.width &&
-            this.dy>0//look how much formated the code is
+            this.x < paddle.x + paddle.width &&
+            this.dy>0
         ){
             const offset = (this.x- (paddle.x+ paddle.width/2))/ (paddle.width/2);
             this.dx = offset *7;
@@ -78,6 +78,7 @@ class Ball{
             screenshake = 6;
         }
     }
+    //jst tired
     draw(){
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI *2);
@@ -99,7 +100,7 @@ class Box{
         if(!this.alive) return;
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.w ,this.h);
-        ctx.strokeStyle = 'rgba(255,255,255,0.3';
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
         ctx.strokeRect(this.x+ 2, this.y+2, this.w -4, this.h-4);
     }
 }
@@ -110,7 +111,7 @@ function buildboxes(){
         for(let c=0;c<SETTINGS.cols; c++){
             const x= c*(SETTINGS.boxw + SETTINGS.boxgap) + SETTINGS.boxleft;
             const y = r * (SETTINGS.boxh + SETTINGS.boxgap ) + SETTINGS.boxtop;
-            boxs[r][c]= new brick(x, y,r);
+            boxs[r][c]= new Box(x, y,r);
         }
     }
 }
@@ -156,12 +157,73 @@ function update(){
         lives--;
         if(lives<=0){
             state = 'OVER';
-            status.Label.innerText = 'GAME OVER YoU ARE A LOSER';
-            gameOverBox.classList.remove('hidden');
+            gameoverscreen.classList.remove('hidden');
             finalscore.innerText = score;
         } else{
             balls.push(new Ball());
         }
     }
-    
+    boxs.flat().forEach(box =>{
+        if(!box.alive) return;
+        balls.forEach(ball=>{
+            //such a drag
+            if(ball.x> box.x &&
+                ball.x< box.x + box.w &&
+                ball.y > box.y &&
+                ball.y < box.y + box.h
+            ){
+                box.alive = false;
+                ball.dy *= -1;
+                score += box.points;
+                spawnparticles(box.x + box.w/2, box.y + box.h/2, box.color, 12);
+            }
+        });
+    });
+    scoretext.innerText = `SCORE: ${score.toString().padStart(5, '0')}`;
+    livestext.innerText = `LIVES: ${lives}`;
+    if(screenshake > 0) screenshake--;
 }
+//aalmost done last functions left
+function draw(){
+    ctx.save();
+    if(screenshake > 0){
+        ctx.translate(Math.random()* 8 -4, Math.random()* 8 - 4);
+    }
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    
+    ctx.fillStyle = paddle.color;
+    ctx.shadowBlur = paddle.glow;
+    ctx.shadowColor = paddle.color;
+    ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+    ctx.shadowBlur = 0;
+    balls.forEach(b => b.draw());
+
+    boxs.flat().forEach(b=>b.draw());
+    particles.forEach((p, i)=>{
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.03;
+        if(p.life<=0) particles.splice(i,1);
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x,p.y,3,3);
+        ctx.globalAlpha = 1;
+    });
+    ctx.restore();
+    update();
+    requestAnimationFrame(draw);
+}
+function startgame(){
+    score = 0;
+    lives = 3;
+    state ='PLAYING';
+    balls = [new Ball()];
+    buildboxes();
+    startscreen.classList.add('hidden');
+    gameoverscreen.classList.add('hidden');
+}
+document.getElementById('start-button').addEventListener('click', startgame);
+document.getElementById('restart-btn').addEventListener('click', startgame);
+console.log('Begin the Game lets see if you can beat the whole game.');
+draw();
+//finally done YAY 
