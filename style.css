@@ -122,4 +122,18 @@ button:hover{
     border-color: #000;
     opacity: 0.3;
 }
+#history-container{
+    border-top: 1px solid #333;
+    margin: 20px 0;
+    max-height: 150px;
+    overflow-y: auto;
+}
+#history-list li{
+    width: 200px;
+    font-size: 18px;
+    margin: 5px auto;
+    display: flex;
+    justify-content: space-between;
+}
+
 /*finishe the css YAY 8*/

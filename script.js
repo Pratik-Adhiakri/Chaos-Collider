@@ -7,6 +7,7 @@ const gameoverscreen = document.getElementById('game-over');
 const statuslabel = document.getElementById('status-text');
 const finalscore = document.getElementById('final-score');
 const canvas = document.getElementById('game-canvas');
+const historylist = document.getElementById('history-list');
 const ctx = canvas.getContext('2d');
 const SETTINGS ={
     paddlew: 120,
@@ -159,6 +160,7 @@ function update(){
             state = 'OVER';
             gameoverscreen.classList.remove('hidden');
             finalscore.innerText = score;
+            saveToHistory(score);
         } else{
             balls.push(new Ball());
         }
@@ -212,6 +214,22 @@ function draw(){
     ctx.restore();
     update();
     requestAnimationFrame(draw);
+}
+function saveToHistory(newScore){
+    let history = JSON.parse(localStorage.getItem('colliderHistory'))||[];
+    const entry ={
+        score: newScore,
+        date: new Date().toLocaleDateString()
+    };
+    history.push(entry);
+    history.sort((a,b)=>b.score - a.score);
+    history= history.slice(0, 5);
+    localStorage.setItem('colliderHistory', JSON.stringify(history));
+    displayHistory();
+}
+function displayHistory(){
+    const history = JSON.parse(localStorage.getItem('colliderHistory'))||[];
+    historylist.innerHTML= history.map(item => `<li><span>${item.date}</span> <span>${item.score}</span></li>`).join('');
 }
 function startgame(){
     score = 0;
