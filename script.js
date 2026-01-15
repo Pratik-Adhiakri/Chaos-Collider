@@ -22,6 +22,12 @@ const SETTINGS ={
     boxh:25,
     palette: ['#ff00ff', '#00ffff', '#bc13fe', '#ff0055', '#00ff00']
 };
+//new and cool features is coking
+const POWERUPS= {
+    MULTIBALL: {color: '#fff', label:'+++', chance:0.3},
+    BIGPADDLE: {color: '#00ffff', label:'<-->', chance: 0.4},
+    SCORE_X2: { color: '#ff00ff', label: '$$$', chance: 0.3}
+};
 
 //let stuffs
 let score = 0;
@@ -31,6 +37,7 @@ let balls = [];
 let boxs = [];
 let particles = [];
 let drops = [];
+let dropTimer = 0;
 let screenshake = 0;
 let paddle = {
     x: canvas.width/2 - SETTINGS.paddlew/2,
@@ -87,6 +94,57 @@ class Ball{
         ctx.fill();
     }
 }
+class Drop{
+    constructor(x, y, type){
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.width = 30;
+        this.height = 20;
+        this.speed = 7;
+    }
+    update(){
+        this.y += this.speed;
+        if(this.y + this.height > paddle.y && this.x>paddle.x && this.x<paddle.x + paddle.width){
+            this.applyEffect();
+            return true;
+        }
+        return this.y>canvas.height;
+    }
+    draw(){
+        ctx.save();
+        this.speed = 4.5;
+        ctx.strokeStyle = this.type.color;
+        ctx.lineWidth = 2;
+        //making the style better because it sucked before
+        ctx.strokeRect(this.x - 20, this.y - 10,40,20);
+        ctx.fillStyle = "rgba(0,0,0,0.8";
+        ctx.fillRect(this.x-20, this.y -10,40,20);
+        ctx.fillStyle = this.type.color;
+        ctx.font = "bold 14px 'Courier New'";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(this.type.label, this.x, this.y);
+    
+    ctx.restore()
+    }
+    applyEffect(){
+        //tongyu told me add cool features to the game so here i am putting it
+        if(this.type === POWERUPS.MULTIBALL){
+            balls.push(new Ball(paddle.x + paddle.width/2, paddle.y -10,-4,-6));
+            balls.push(new Ball(paddle.x + paddle.width/2, paddle.y - 10,4,-6));
+            balls.forEach(b=> b.attached = false);
+        }else if(this.type ===POWERUPS.BIGPADDLE){
+            paddle.width = 250;
+            setTimeout(()=> paddle.width = SETTINGS.paddlew, 8000);
+        } else if(this.type === POWERUPS.SCORE_X2){
+            score += 500;
+            screenshake = 20;
+        }
+    }
+
+}
+
 class Box{
     constructor(x,y,row){
         this.x = x;
@@ -146,44 +204,67 @@ window.addEventListener('mousedown', ()=>{
         }
     });
 });
-function update(){
-    if(state !=='PLAYING') return;
-    balls.forEach((ball, i)=>{
+function update() {//had to renovate this function totally for the fing powerups to work nicely :heavysob
+    if (state !== 'PLAYING') return;
+
+    dropTimer++;
+    if (dropTimer > 60) { 
+        dropTimer = 0;
+        const aliveBoxes = boxs.flat().filter(b => b.alive);
+        if (aliveBoxes.length > 0) {
+            const randomBox = aliveBoxes[Math.floor(Math.random() * aliveBoxes.length)];
+            const types = Object.values(POWERUPS);
+            const randomType = types[Math.floor(Math.random() * types.length)];
+            drops.push(new Drop(randomBox.x + randomBox.w / 2, randomBox.y, randomType));
+        }
+    }
+
+    drops = drops.filter(drop => !drop.update());
+
+    balls.forEach((ball, i) => {
         ball.update();
-        if(ball.y- ball.radius > canvas.height){
+        if (ball.y - ball.radius > canvas.height) {
             balls.splice(i, 1);
         }
     });
-    if(balls.length ===0){
+
+    if (balls.length === 0) {
         lives--;
-        if(lives<=0){
+        if (lives <= 0) {
             state = 'OVER';
             gameoverscreen.classList.remove('hidden');
             finalscore.innerText = score;
             saveToHistory(score);
-        } else{
+        } else {
+            paddle.targetwidth = SETTINGS.paddlew; 
             balls.push(new Ball());
         }
     }
-    boxs.flat().forEach(box =>{
-        if(!box.alive) return;
-        balls.forEach(ball=>{
+
+    boxs.flat().forEach(box => {
+        if (!box.alive) return;
+        balls.forEach(ball => {
             //such a drag
-            if(ball.x> box.x &&
-                ball.x< box.x + box.w &&
+            if (ball.x > box.x &&
+                ball.x < box.x + box.w &&
                 ball.y > box.y &&
                 ball.y < box.y + box.h
-            ){
+            ) {
                 box.alive = false;
                 ball.dy *= -1;
                 score += box.points;
-                spawnparticles(box.x + box.w/2, box.y + box.h/2, box.color, 12);
+                spawnparticles(box.x + box.w / 2, box.y + box.h / 2, box.color, 12);
+                screenshake = 4;
             }
         });
     });
+
     scoretext.innerText = `SCORE: ${score.toString().padStart(5, '0')}`;
     livestext.innerText = `LIVES: ${lives}`;
-    if(screenshake > 0) screenshake--;
+
+    paddle.width += (paddle.targetwidth - paddle.width) * 0.1;
+    
+    if (screenshake > 0) screenshake--;
 }
 //aalmost done last functions left
 function draw(){
@@ -213,24 +294,19 @@ function draw(){
     });
     ctx.restore();
     update();
+    drops.forEach(d=>d.draw());
     requestAnimationFrame(draw);
 }
 function saveToHistory(newScore){
     let history = JSON.parse(localStorage.getItem('colliderHistory'))||[];
-    const entry ={
-        score: newScore,
-        date: new Date().toLocaleDateString()
-    };
-    history.push(entry);
-    history.sort((a,b)=>b.score - a.score);
-    history= history.slice(0, 5);
+    history.push({score: newScore, date: new Date().toLocaleTimeString()});
+    history.sort((a,b)=> b.score - a.score);
+    history = history.slice(0,5);
     localStorage.setItem('colliderHistory', JSON.stringify(history));
-    displayHistory();
+
+    historylist.innerHTML = history.map(h=> `<li><span>${h.date}</span> <span>${h.score}</span></li>`).join('');
 }
-function displayHistory(){
-    const history = JSON.parse(localStorage.getItem('colliderHistory'))||[];
-    historylist.innerHTML= history.map(item => `<li><span>${item.date}</span> <span>${item.score}</span></li>`).join('');
-}
+
 function startgame(){
     score = 0;
     lives = 3;
@@ -239,6 +315,7 @@ function startgame(){
     buildboxes();
     startscreen.classList.add('hidden');
     gameoverscreen.classList.add('hidden');
+    drops = [];
 }
 document.getElementById('start-button').addEventListener('click', startgame);
 document.getElementById('restart-btn').addEventListener('click', startgame);

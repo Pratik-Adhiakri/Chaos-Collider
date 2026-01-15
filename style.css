@@ -103,7 +103,7 @@ button:hover{
     height: 100px;
     width: 100px;
     position:absolute;
-    bottom: 1px solid #222;
+    border: 1px solid #222;
     z-index: -1;
 }
 .b1{
